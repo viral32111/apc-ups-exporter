@@ -59,8 +59,8 @@ type Status struct {
 
 	AlarmDelayInterval int64 // ALARMDEL
 
-	TimeOnBattery time.Duration // TONBATT
-	TotalTimeOnBattery time.Duration // CUMONBATT
+	TimeOnBattery int64 // TONBATT
+	TotalTimeOnBattery int64 // CUMONBATT
 
 	SelfTestResult string // SELFTEST
 
@@ -131,8 +131,8 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 			case "LASTXFER": status.Daemon.Transfer.LastReason = value
 			case "NUMXFERS": status.Daemon.Transfer.Count, _ = strconv.ParseInt( value, 10, 64 )
 
-			case "TONBATT": status.TimeOnBattery, _ = time.ParseDuration( value + "s" )
-			case "CUMONBATT": status.TotalTimeOnBattery, _ = time.ParseDuration( value + "s" )
+			case "TONBATT": status.TimeOnBattery, _ = strconv.ParseInt( value, 10, 64 )
+			case "CUMONBATT": status.TotalTimeOnBattery, _ = strconv.ParseInt( value, 10, 64 )
 
 			case "SELFTEST": status.SelfTestResult = value
 

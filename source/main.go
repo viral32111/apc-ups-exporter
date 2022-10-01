@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 )
 
 const (
@@ -66,23 +67,79 @@ func main() {
 	// Require a valid interval for collecting metrics
 	if ( flagMetricsInterval <= 0 ) { exitWithErrorMessage( "Invalid interval to wait between collecting metrics, must be greater than 0." ) }
 
+	// Reset all metrics - probably not needed
+	ResetMetrics()
+	fmt.Println( "Reset all metrics to zero." )
 
+	// Start collecting metrics in the background
+	go collectMetricsInBackground( flagMetricsInterval, nisAddress, flagNisPort )
 
+	// Serve metrics page
+	fmt.Printf( "Serving metrics at http://%s:%d%s...\n\n", flagMetricsAddress, flagMetricsPort, flagMetricsPath )
+	ServeMetrics( metricsAddress, flagMetricsPort, flagMetricsPath )
 
+}
+
+// Runs in the background to periodically collect metrics
+func collectMetricsInBackground( interval int, nisAddress net.IP, nisPort int ) {
+	fmt.Printf( "Starting background metrics collection...\n\n" )
+
+	for {
+		updateMetrics( nisAddress, nisPort )
+
+		fmt.Printf( " Waiting %d seconds until next collection...\n\n", interval )
+		time.Sleep( time.Duration( interval ) * time.Second )
+	}
+}
+
+// Updates the metrics with the latest status from the NIS
+func updateMetrics( nisAddress net.IP, nisPort int ) {
 
 	// Create
 	var networkInformationServer NetworkInformationServer
 
 	// Connect
-	connectError := networkInformationServer.Connect( nisAddress, flagNisPort, 5000 )
+	connectError := networkInformationServer.Connect( nisAddress, nisPort, 5000 )
 	if connectError != nil { exitWithErrorMessage( connectError.Error() ) }
 	defer networkInformationServer.Disconnect()
-	//fmt.Println( "Connected" )
+	fmt.Println( "Connected to Network Information Server." )
 
-	// Status
+	// Fetch status
 	status, statusError := networkInformationServer.FetchStatus()
 	if statusError != nil { exitWithErrorMessage( statusError.Error() ) }
+	fmt.Println( " Fetched status from Network Information Server." )
 
+	// Update status metric
+	switch status.Status {
+		case "ONLINE": metricStatus.Set( 1 )
+		case "ONBATT": metricStatus.Set( 2 )
+		default: metricStatus.Set( -1 )
+	}
+
+	// Update power metrics
+	metricPowerInputExpectVoltage.Set( status.NormalInputVoltage )
+	metricPowerOutputWattage.Set( float64( status.NormalPowerOutputWattage ) )
+	metricPowerLineVoltage.Set( status.LineVoltage )
+	metricPowerLoadPercent.Set( status.LoadPercent )
+
+	// Update battery metrics
+	metricBatteryExpectVoltage.Set( status.NormalBatteryVoltage )
+	metricBatteryActualVoltage.Set( status.Battery.Voltage )
+	metricBatteryTimeSpentLatestSeconds.Set( float64( status.TimeOnBattery ) )
+	metricBatteryTimeSpentTotalSeconds.Set( float64( status.TotalTimeOnBattery ) )
+	metricBatteryRemainingChargePercent.Set( status.Battery.Charge )
+	metricBatteryRemainingTimeMinutes.Set( status.Battery.TimeLeft )
+	
+	// Update daemon metrics
+	metricDaemonRemainingChargePercent.Set( float64( status.Daemon.Configuration.MinimumBatteryCharge ) )
+	metricDaemonRemainingTimeMinutes.Set( float64( status.Daemon.Configuration.MinimumBatteryTimeLeft ) )
+	metricDaemonTimeoutMinutes.Set( float64( status.Daemon.Configuration.MaximumTimeout ) )
+	metricDaemonTransferCount.Set( float64( status.Daemon.Transfer.Count ) )
+	metricDaemonStartTimestamp.Set( float64( status.Daemon.StartupTime.Unix() ) )
+
+	fmt.Println( " Disconnected from Network Information Server." )
+
+	/*
 	// Daemon
 	fmt.Printf( "Daemon Hostname: '%s'\n", status.Daemon.Hostname )
 	fmt.Printf( "Daemon Version: '%s'\n", status.Daemon.Version )
@@ -149,14 +206,7 @@ func main() {
 
 	// Self-test
 	fmt.Printf( "Last Self-Test Result: '%s'\n", status.SelfTestResult )
-
-	/*************************************/
-
-	// Reset metrics
-	ResetMetrics()
-
-	// Serve metrics page
-	ServeMetrics( metricsAddress, flagMetricsPort, flagMetricsPath )
+	*/
 
 }
 
