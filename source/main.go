@@ -1,50 +1,80 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
-
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var batteryChargeGague = promauto.NewGauge( prometheus.GaugeOpts {
-	Namespace: "ups",
-	Subsystem: "battery",
-	Name: "charge",
-	Help: "The percentage charge on the batteries.",
-} )
+const (
+	PROJECT_NAME = "APC UPS Exporter"
+	PROJECT_VERSION = "1.0.0"
 
-/*func doMetrics() {
-	fmt.Println( "Starting metrics collection..." )
-
-	go func() {
-		for {
-			exampleCounter.Inc()
-			fmt.Println( "Incremented counter" )
-
-			time.Sleep( 1 * time.Second )
-		}
-	}()
-}*/
+	AUTHOR_NAME = "viral32111"
+	AUTHOR_WEBSITE = "https://viral32111.com"
+)
 
 func main() {
 
-	// Register metrics
-	prometheus.MustRegister( batteryChargeGague )
+	// Values of the command-line flags, and the defaults
+	flagNisAddress := "127.0.0.1"
+	flagNisPort := 3551
+	flagMetricsAddress := "127.0.0.1"
+	flagMetricsPort := 5000
+	flagMetricsPath := "/metrics"
+	flagMetricsInterval := 15 // Default Prometheus scrape interval
 
-	// Configuration
-	nisAddress := net.IPv4( 192, 168, 0, 10 )
-	nisPort := 3551
+	// Setup the command-line flags
+	flag.StringVar( &flagNisAddress, "nis-address", flagNisAddress, "The IPv4 address of the apcupsd Network Information Server." )
+	flag.IntVar( &flagNisPort, "nis-port", flagNisPort, "The port number of the apcupsd Network Information Server." )
+	flag.StringVar( &flagMetricsAddress, "metrics-address", flagMetricsAddress, "The IPv4 address to listen on for the Prometheus HTTP metrics server." )
+	flag.IntVar( &flagMetricsPort, "metrics-port", flagMetricsPort, "The port number to listen on for the Prometheus HTTP metrics server." )
+	flag.StringVar( &flagMetricsPath, "metrics-path", flagMetricsPath, "The full HTTP path to the metrics page." )
+	flag.IntVar( &flagMetricsInterval, "metrics-interval", flagMetricsInterval, "The time in seconds to wait between collecting metrics." )
+
+	// Set a custom help message
+	flag.Usage = func() {
+		fmt.Printf( "%s, v%s, by %s (%s).\n", PROJECT_NAME, PROJECT_VERSION, AUTHOR_NAME, AUTHOR_WEBSITE )
+
+		fmt.Printf( "\nUsage: %s [-h/-help] [-nis-address <IPv4 address>] [-nis-port <number>] [-metrics-address <IPv4 address>] [-metrics-port <number>] [-metrics-path <string>] [-metrics-interval <seconds>]\n", os.Args[ 0 ] )
+		flag.PrintDefaults()
+
+		os.Exit( 1 ) // By default it exits with code 2
+	}
+
+	// Parse the command-line flags
+	flag.Parse()
+
+	// Require a valid IP address for the Network Information Server
+	nisAddress := net.ParseIP( flagNisAddress )
+	if ( flagNisAddress == "" || nisAddress == nil || nisAddress.To4() == nil ) { exitWithErrorMessage( "Invalid IPv4 address for apcupsd's Nnetwork Information Server." ) }
+
+	// Require a valid port number for the Network Information Server
+	if ( flagNisPort <= 0 || flagNisPort >= 65536 ) { exitWithErrorMessage( "Invalid port number for apcupsd's Network Information Server." ) }
+
+	// Require a valid IP address for the Prometheus HTTP metrics server
+	metricsAddress := net.ParseIP( flagMetricsAddress )
+	if ( flagMetricsAddress == "" || metricsAddress == nil || metricsAddress.To4() == nil ) { exitWithErrorMessage( "Invalid listening IPv4 address for the Prometheus HTTP metrics server." ) }
+
+	// Require a valid port number for the Prometheus HTTP metrics server
+	if ( flagMetricsPort <= 0 || flagMetricsPort >= 65536 ) { exitWithErrorMessage( "Invalid listening port number for the Prometheus HTTP metrics server." ) }
+
+	// Require a valid HTTP path for the metrics page
+	if ( flagMetricsPath == "" || flagMetricsPath[ 0 : 1 ] != "/" || flagMetricsPath[ 1 : ] == "/" ) { exitWithErrorMessage( "Invalid path for the metrics page, must have a leading slash and no trailing slash." ) }
+
+	// Require a valid interval for collecting metrics
+	if ( flagMetricsInterval <= 0 ) { exitWithErrorMessage( "Invalid interval to wait between collecting metrics, must be greater than 0." ) }
+
+
+
+
 
 	// Create
 	var networkInformationServer NetworkInformationServer
 
 	// Connect
-	connectError := networkInformationServer.Connect( nisAddress, nisPort, 5000 )
+	connectError := networkInformationServer.Connect( nisAddress, flagNisPort, 5000 )
 	if connectError != nil { exitWithErrorMessage( connectError.Error() ) }
 	defer networkInformationServer.Disconnect()
 	//fmt.Println( "Connected" )
@@ -79,7 +109,7 @@ func main() {
 
 	// Status
 	fmt.Printf( "Status: '%s' (%d)\n", status.Status, status.StatusFlag )
-	fmt.Printf( "Startup Time: %s\n", status.StartupTime.Format( "2006-01-02 15:04:05" ) )
+	fmt.Printf( "Startup Time: %s\n", status.Daemon.StartupTime.Format( "2006-01-02 15:04:05" ) )
 	fmt.Println()
 
 	// Load
@@ -108,8 +138,8 @@ func main() {
 	fmt.Println()
 
 	// Transfer to battery
-	fmt.Printf( "Total Transfers: %d\n", status.TransferCount )
-	fmt.Printf( "Last Transfer Reason: '%s'\n", status.LastTransferReason )
+	fmt.Printf( "Total Transfers: %d\n", status.Daemon.Transfer.Count )
+	fmt.Printf( "Last Transfer Reason: '%s'\n", status.Daemon.Transfer.LastReason )
 	fmt.Println()
 
 	// Battery time
@@ -120,9 +150,13 @@ func main() {
 	// Self-test
 	fmt.Printf( "Last Self-Test Result: '%s'\n", status.SelfTestResult )
 
+	/*************************************/
+
+	// Reset metrics
+	ResetMetrics()
+
 	// Serve metrics page
-	http.Handle( "/metrics", promhttp.Handler() )
-	http.ListenAndServe( "127.0.0.1:5000", nil )
+	ServeMetrics( metricsAddress, flagMetricsPort, flagMetricsPath )
 
 }
 

@@ -16,11 +16,17 @@ type Status struct {
 		Hostname string // HOSTNAME
 		Version string // VERSION
 		Mode string // UPSMODE
+		StartupTime time.Time // STARTTIME
 
 		Configuration struct {
 			MinimumBatteryCharge int64 // MBATTCHG
 			MinimumBatteryTimeLeft int64 // MINTIMEL
 			MaximumTimeout int64 // MAXTIME
+		}
+
+		Transfer struct {
+			Count int64 // NUMXFERS
+			LastReason string // LASTXFER
 		}
 	}
 
@@ -35,7 +41,6 @@ type Status struct {
 	}
 
 	Status string // STATUS
-	StartupTime time.Time // STARTTIME
 
 	LoadPercent float64 // LOADPCT
 	LineVoltage float64 // LINEV
@@ -53,9 +58,6 @@ type Status struct {
 	HighTransferVoltage float64 // HITRANS
 
 	AlarmDelayInterval int64 // ALARMDEL
-
-	LastTransferReason string // LASTXFER
-	TransferCount int64 // NUMXFERS
 
 	TimeOnBattery time.Duration // TONBATT
 	TotalTimeOnBattery time.Duration // CUMONBATT
@@ -103,7 +105,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			case "UPSMODE": status.Daemon.Mode = value
 
-			case "STARTTIME": status.StartupTime, _ = time.Parse( "2006-01-02 15:04:05 -0700", value )
+			case "STARTTIME": status.Daemon.StartupTime, _ = time.Parse( "2006-01-02 15:04:05 -0700", value )
 
 			case "MODEL": status.Model = value
 
@@ -126,8 +128,8 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			case "ALARMDEL": status.AlarmDelayInterval, _ = strconv.ParseInt( value, 10, 64 )
 
-			case "LASTXFER": status.LastTransferReason = value
-			case "NUMXFERS": status.TransferCount, _ = strconv.ParseInt( value, 10, 64 )
+			case "LASTXFER": status.Daemon.Transfer.LastReason = value
+			case "NUMXFERS": status.Daemon.Transfer.Count, _ = strconv.ParseInt( value, 10, 64 )
 
 			case "TONBATT": status.TimeOnBattery, _ = time.ParseDuration( value + "s" )
 			case "CUMONBATT": status.TotalTimeOnBattery, _ = time.ParseDuration( value + "s" )
