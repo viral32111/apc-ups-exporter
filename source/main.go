@@ -139,7 +139,7 @@ func updateMetrics( nisAddress net.IP, nisPort int ) {
 
 	fmt.Println( " Disconnected from Network Information Server." )
 
-	/*
+	
 	// Daemon
 	fmt.Printf( "Daemon Hostname: '%s'\n", status.Daemon.Hostname )
 	fmt.Printf( "Daemon Version: '%s'\n", status.Daemon.Version )
@@ -206,7 +206,7 @@ func updateMetrics( nisAddress net.IP, nisPort int ) {
 
 	// Self-test
 	fmt.Printf( "Last Self-Test Result: '%s'\n", status.SelfTestResult )
-	*/
+	
 
 }
 

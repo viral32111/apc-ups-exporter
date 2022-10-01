@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -88,7 +89,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 		value = strings.TrimSuffix( value, " Percent" )
 		value = strings.TrimSuffix( value, " Watts" )
 
-		//fmt.Printf( "'%s' = '%s'\n", key, value )
+		fmt.Printf( "'%s' = '%s'\n", key, value )
 
 		switch key {
 			// APC
@@ -127,6 +128,8 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 			case "HITRANS": status.HighTransferVoltage, _ = strconv.ParseFloat( value, 64 )
 
 			case "ALARMDEL": status.AlarmDelayInterval, _ = strconv.ParseInt( value, 10, 64 )
+
+			case "BATTV": status.Battery.Voltage, _ = strconv.ParseFloat( value, 64 )
 
 			case "LASTXFER": status.Daemon.Transfer.LastReason = value
 			case "NUMXFERS": status.Daemon.Transfer.Count, _ = strconv.ParseInt( value, 10, 64 )
