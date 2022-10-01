@@ -1,0 +1,89 @@
+name: Build
+
+on:
+  push:
+    paths:
+    - '**.go'
+    - 'go.mod'
+    - '.github/workflows/build.yml'
+    branches:
+    - '**'
+    tags:
+    - '*.*.*'
+  pull_request:
+    branches:
+    - '**'
+  workflow_dispatch:
+
+env:
+  PROJECT: apc-ups-exporter
+
+jobs:
+  build:
+    name: APC UPS Exporter
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+    - name: Clone Repository
+      uses: actions/checkout@v3
+
+    - name: Setup Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
+
+    - name: Setup Build Environment
+      run: |
+        sudo apt-get install --no-install-recommends --yes musl-tools
+        mkdir --verbose ./builds/
+
+    - name: Build for Linux (x64) (glibc)
+      env:
+        GOOS: linux
+        GOARCH: amd64
+        LIBRARY: glibc
+      run: |
+        go build -v -ldflags='-s -w' -o ./builds/$PROJECT-$GOOS-$GOARCH-$LIBRARY ./source/
+        strip ./builds/$PROJECT-$GOOS-$GOARCH-$LIBRARY
+        file ./builds/$PROJECT-$GOOS-$GOARCH-$LIBRARY
+        sha256sum ./builds/$PROJECT-$GOOS-$GOARCH-$LIBRARY
+
+    - name: Build for Linux (x64) (musl)
+      env:
+        GOOS: linux
+        GOARCH: amd64
+        LIBRARY: musl
+        CC: /usr/bin/musl-gcc
+      run: |
+        go build -v -ldflags='-s -w -linkmode external -extldflags "-static"' -o ./builds/$PROJECT-$GOOS-$GOARCH-$LIBRARY ./source/
+        strip ./builds/$PROJECT-$GOOS-$GOARCH-$LIBRARY
+        file ./builds/$PROJECT-$GOOS-$GOARCH-$LIBRARY
+        sha256sum ./builds/$PROJECT-$GOOS-$GOARCH-$LIBRARY
+
+    - name: Build for Windows (x64)
+      env:
+        GOOS: windows
+        GOARCH: amd64
+      run: |
+        go build -v -ldflags='-s -w' -o ./builds/$PROJECT-$GOOS-$GOARCH.exe ./source/
+        strip ./builds/$PROJECT-$GOOS-$GOARCH.exe
+        file ./builds/$PROJECT-$GOOS-$GOARCH.exe
+        sha256sum ./builds/$PROJECT-$GOOS-$GOARCH.exe
+
+    - name: Upload Builds
+      uses: actions/upload-artifact@v3
+      with:
+        name: builds
+        path: ./builds/
+
+    - name: Create Release
+      if: ${{ github.ref_type == 'tag' && github.event_name != 'pull_request' }}
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: ${{ github.ref_name }}
+        draft: true
+        files: |
+          ./builds/*
