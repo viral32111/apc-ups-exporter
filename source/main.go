@@ -3,18 +3,20 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 
-	//"github.com/prometheus/client_golang/prometheus"
-	//"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-/*var batteryChargeGague = promauto.NewGauge( prometheus.GaugeOpts {
+var batteryChargeGague = promauto.NewGauge( prometheus.GaugeOpts {
 	Namespace: "ups",
 	Subsystem: "battery",
 	Name: "charge",
 	Help: "The percentage charge on the batteries.",
-} )*/
+} )
 
 /*func doMetrics() {
 	fmt.Println( "Starting metrics collection..." )
@@ -31,7 +33,8 @@ import (
 
 func main() {
 
-	//prometheus.MustRegister( batteryChargeGague )
+	// Register metrics
+	prometheus.MustRegister( batteryChargeGague )
 
 	// Configuration
 	nisAddress := net.IPv4( 192, 168, 0, 10 )
@@ -116,6 +119,10 @@ func main() {
 
 	// Self-test
 	fmt.Printf( "Last Self-Test Result: '%s'\n", status.SelfTestResult )
+
+	// Serve metrics page
+	http.Handle( "/metrics", promhttp.Handler() )
+	http.ListenAndServe( "127.0.0.1:5000", nil )
 
 }
 
