@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Metadata
 const (
 	PROJECT_NAME = "APC UPS Exporter"
 	PROJECT_VERSION = "1.0.0"
@@ -16,6 +17,7 @@ const (
 	AUTHOR_WEBSITE = "https://viral32111.com"
 )
 
+// Entry-point
 func main() {
 
 	// Values of the command-line flags, and the defaults
@@ -67,79 +69,93 @@ func main() {
 	// Require a valid interval for collecting metrics
 	if ( flagMetricsInterval <= 0 ) { exitWithErrorMessage( "Invalid interval to wait between collecting metrics, must be greater than 0." ) }
 
-	// Reset all metrics - probably not needed
+	// Display the configuration
+	fmt.Printf( "The configured Network Information Server is: %s:%d.\n\n", nisAddress, flagNisPort )
+
+	// Reset all metrics
+	fmt.Println( "Resetting all metrics..." )
 	ResetMetrics()
-	fmt.Println( "Reset all metrics to zero." )
 
 	// Start collecting metrics in the background
+	fmt.Println( "Starting background metrics collection..." )
 	go collectMetricsInBackground( flagMetricsInterval, nisAddress, flagNisPort )
 
-	// Serve metrics page
-	fmt.Printf( "Serving metrics at http://%s:%d%s...\n\n", flagMetricsAddress, flagMetricsPort, flagMetricsPath )
+	// Serve the metrics page
+	fmt.Printf( "Serving metrics page at http://%s:%d%s...\n", flagMetricsAddress, flagMetricsPort, flagMetricsPath )
 	ServeMetrics( metricsAddress, flagMetricsPort, flagMetricsPath )
 
 }
 
 // Runs in the background to periodically collect metrics
 func collectMetricsInBackground( interval int, nisAddress net.IP, nisPort int ) {
-	fmt.Printf( "Starting background metrics collection...\n\n" )
 
+	// Loop forever...
 	for {
+
+		// Update metric values
 		updateMetrics( nisAddress, nisPort )
 
-		fmt.Printf( " Waiting %d seconds until next collection...\n\n", interval )
+		// Wait the collection interval
+		fmt.Printf( " Waiting %d seconds for next collection...\n", interval )
 		time.Sleep( time.Duration( interval ) * time.Second )
+
 	}
+
 }
 
 // Updates the metrics with the latest status from the NIS
 func updateMetrics( nisAddress net.IP, nisPort int ) {
 
-	// Create
+	// Create an empty structure
 	var networkInformationServer NetworkInformationServer
 
-	// Connect
+	// Connect to the server
 	connectError := networkInformationServer.Connect( nisAddress, nisPort, 5000 )
 	if connectError != nil { exitWithErrorMessage( connectError.Error() ) }
 	defer networkInformationServer.Disconnect()
-	fmt.Println( "Connected to Network Information Server." )
+	fmt.Println( "\nConnected to the Network Information Server." )
 
-	// Fetch status
+	// Fetch the status from the server
 	status, statusError := networkInformationServer.FetchStatus()
 	if statusError != nil { exitWithErrorMessage( statusError.Error() ) }
-	fmt.Println( " Fetched status from Network Information Server." )
+	fmt.Println( " Fetched status from the Network Information Server." )
 
 	// Update status metric
-	switch status.Status {
+	switch status.UPS.StatusText {
 		case "ONLINE": metricStatus.Set( 1 )
 		case "ONBATT": metricStatus.Set( 2 )
 		default: metricStatus.Set( -1 )
 	}
+	fmt.Println( "  Updated the status metric." )
 
 	// Update power metrics
-	metricPowerInputExpectVoltage.Set( status.NormalInputVoltage )
-	metricPowerOutputWattage.Set( float64( status.NormalPowerOutputWattage ) )
-	metricPowerLineVoltage.Set( status.LineVoltage )
-	metricPowerLoadPercent.Set( status.LoadPercent )
+	metricPowerInputExpectVoltage.Set( status.UPS.Expect.MainsInputVoltage )
+	metricPowerOutputWattage.Set( status.UPS.Expect.PowerOutputWattage )
+	metricPowerLineVoltage.Set( status.UPS.LineVoltage )
+	metricPowerLoadPercent.Set( status.UPS.LoadPercent )
+	fmt.Println( "  Updated the power metrics." )
 
 	// Update battery metrics
-	metricBatteryExpectVoltage.Set( status.NormalBatteryVoltage )
-	metricBatteryActualVoltage.Set( status.Battery.Voltage )
-	metricBatteryTimeSpentLatestSeconds.Set( float64( status.TimeOnBattery ) )
-	metricBatteryTimeSpentTotalSeconds.Set( float64( status.TotalTimeOnBattery ) )
-	metricBatteryRemainingChargePercent.Set( status.Battery.Charge )
-	metricBatteryRemainingTimeMinutes.Set( status.Battery.TimeLeft )
+	metricBatteryExpectVoltage.Set( status.UPS.Expect.BatteryOutputVoltage )
+	metricBatteryActualVoltage.Set( status.UPS.Battery.OutputVoltage )
+	metricBatteryTimeSpentLatestSeconds.Set( status.Daemon.Battery.TimeSpent.Current )
+	metricBatteryTimeSpentTotalSeconds.Set( status.Daemon.Battery.TimeSpent.Total )
+	metricBatteryRemainingChargePercent.Set( status.UPS.Battery.ChargePercent )
+	metricBatteryRemainingTimeMinutes.Set( status.UPS.Battery.RemainingRuntimeMinutes )
+	fmt.Println( "  Updated the battery metrics." )
 	
 	// Update daemon metrics
-	metricDaemonRemainingChargePercent.Set( float64( status.Daemon.Configuration.MinimumBatteryCharge ) )
-	metricDaemonRemainingTimeMinutes.Set( float64( status.Daemon.Configuration.MinimumBatteryTimeLeft ) )
-	metricDaemonTimeoutMinutes.Set( float64( status.Daemon.Configuration.MaximumTimeout ) )
-	metricDaemonTransferCount.Set( float64( status.Daemon.Transfer.Count ) )
+	metricDaemonRemainingChargePercent.Set( status.Daemon.Configuration.MinimumBatteryChargePercent )
+	metricDaemonRemainingTimeMinutes.Set( status.Daemon.Configuration.MinimumBatteryRemainingRuntimeMinutes )
+	metricDaemonTimeoutMinutes.Set( status.Daemon.Configuration.MaximumTimeoutMinutes )
+	metricDaemonTransferCount.Set( status.Daemon.Battery.Transfer.Total )
 	metricDaemonStartTimestamp.Set( float64( status.Daemon.StartupTime.Unix() ) )
+	fmt.Println( "  Updated the daemon metrics." )
 
-	fmt.Println( " Disconnected from Network Information Server." )
+	// Disconnect message for clarity, this is actually done by the defer statement
+	fmt.Println( " Disconnected from the Network Information Server." )
 
-	
+	/*
 	// Daemon
 	fmt.Printf( "Daemon Hostname: '%s'\n", status.Daemon.Hostname )
 	fmt.Printf( "Daemon Version: '%s'\n", status.Daemon.Version )
@@ -206,11 +222,12 @@ func updateMetrics( nisAddress net.IP, nisPort int ) {
 
 	// Self-test
 	fmt.Printf( "Last Self-Test Result: '%s'\n", status.SelfTestResult )
-	
+	*/
 
 }
 
+// Displays a message to the standard error stream & exits with a failure status code
 func exitWithErrorMessage( message string ) {
-	fmt.Println( message )
+	fmt.Fprintln( os.Stderr, message )
 	os.Exit( 1 )
 }

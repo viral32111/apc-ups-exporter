@@ -10,9 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+// Create the metrics
 var (
 
-	// Status (ONLINE: 1, ONBATT: 2) - STATUS
+	// Status (as number) - STATUS
 	metricStatus = promauto.NewGauge( prometheus.GaugeOpts {
 		Namespace: "ups",
 		Name: "status",
@@ -137,7 +138,7 @@ var (
 		Help: "The number of transfers to the battery.",
 	} )
 
-	// Startup time (as unix time) - STARTTIME
+	// Daemon startup time (as unix timestamp) - STARTTIME
 	metricDaemonStartTimestamp = promauto.NewGauge( prometheus.GaugeOpts {
 		Namespace: "ups",
 		Subsystem: "daemon",
@@ -147,14 +148,19 @@ var (
 
 )
 
+// Sets all of the metrics to zero
 func ResetMetrics() {
+
+	// Status
 	metricStatus.Set( 0 )
 
+	// Power
 	metricPowerInputExpectVoltage.Set( 0 )
 	metricPowerOutputWattage.Set( 0 )
 	metricPowerLineVoltage.Set( 0 )
 	metricPowerLoadPercent.Set( 0 )
 
+	// Battery
 	metricBatteryExpectVoltage.Set( 0 )
 	metricBatteryActualVoltage.Set( 0 )
 	metricBatteryTimeSpentLatestSeconds.Set( 0 )
@@ -162,15 +168,26 @@ func ResetMetrics() {
 	metricBatteryRemainingChargePercent.Set( 0 )
 	metricBatteryRemainingTimeMinutes.Set( 0 )
 
+	// Daemon
 	metricDaemonRemainingChargePercent.Set( 0 )
 	metricDaemonRemainingTimeMinutes.Set( 0 )
 	metricDaemonTimeoutMinutes.Set( 0 )
 	metricDaemonTransferCount.Set( 0 )
 	metricDaemonStartTimestamp.Set( 0 )
+
 }
 
-func ServeMetrics( address net.IP, port int, path string ) {
+// Serves the metrics page over HTTP
+func ServeMetrics( address net.IP, port int, path string ) ( err error ) {
+
+	// Handle requests to the metrics path using the Prometheus HTTP handler
 	http.Handle( path, promhttp.Handler() )
-	http.ListenAndServe( fmt.Sprintf( "%s:%d" , address, port ), nil )
-}
 
+	// Listen for HTTP requests
+	listenError := http.ListenAndServe( fmt.Sprintf( "%s:%d" , address, port ), nil )
+	if listenError != nil { return listenError }
+
+	// No error, all was good
+	return nil
+
+}
