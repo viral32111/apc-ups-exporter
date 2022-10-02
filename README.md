@@ -47,6 +47,29 @@ Connected to the Network Information Server.
  Waiting 15 seconds for next collection..
 ```
 
+### Metrics
+
+The following metrics are exported:
+
+* `ups_status`
+
+* `ups_power_input_expect_voltage`
+* `ups_power_output_maximum_wattage`
+* `ups_power_line_voltage`
+* `ups_power_load_percent`
+
+* `ups_battery_output_actual_voltage`
+* `ups_battery_time_spent_latest_seconds`
+* `ups_battery_time_spent_total_seconds`
+* `ups_battery_remaining_charge_percent`
+* `ups_battery_remaining_time_minutes`
+
+* `ups_daemon_remaining_charge_percent`
+* `ups_daemon_remaining_time_minutes`
+* `ups_daemon_timeout_minutes`
+* `ups_daemon_transfer_count`
+* `ups_daemon_start_timestamp`
+
 ## License
 
 Copyright (C) 2022 [viral32111](https://viral32111.com).
