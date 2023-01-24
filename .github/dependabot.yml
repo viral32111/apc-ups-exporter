@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Project
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
