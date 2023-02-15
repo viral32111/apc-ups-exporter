@@ -263,10 +263,14 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The delay period for the UPS alarm"
 			case "ALARMDEL": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
-				if floatParseError != nil { return Status{}, floatParseError }
+				if ( value == "No alarm" ) {
+					status.UPS.AlarmIntervalSeconds = -1
+				} else {
+					parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+					if floatParseError != nil { return Status{}, floatParseError }
 
-				status.UPS.AlarmIntervalSeconds = parsedFloat
+					status.UPS.AlarmIntervalSeconds = parsedFloat
+				}
 			}
 
 			// "Battery voltage as supplied by the UPS"
