@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - 'source/**.go'
+      - 'go.mod'
+      - '.github/workflows/ci.yml'
+    branches:
+      - '**'
+    tags:
+     - '*.*.*'
+  workflow_dispatch:
+
+env:
+  PROJECT_NAME: apc-ups-exporter
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        name: [ 'Windows', 'Linux - glibc', 'Linux - musl' ]
+        include:
+          - name: Windows
+            runner: windows-2022
+            os: windows
+            arch: amd64
+          - name: Linux - glibc
+            runner: ubuntu-22.04
+            os: linux
+            arch: amd64
+            library: glibc
+          - name: Linux - musl
+            runner: ubuntu-22.04
+            os: linux
+            arch: amd64
+            library: musl
+    permissions:
+      contents: read
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.19
+
+      - name: Install build tools
+        if: ${{ matrix.library == 'musl' }}
+        run: sudo apt-get install --no-install-recommends --yes musl-tools
+
+      - name: Construct executable name
+        id: executable
+        env:
+          BASE_NAME: ${{ env.PROJECT_NAME }}
+          OPERATING_SYSTEM: ${{ matrix.os }}
+          ARCHITECTURE: ${{ matrix.arch }}
+          LIBRARY: ${{ matrix.library }}
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const { BASE_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY } = process.env;
+            return `${ BASE_NAME }-${ OPERATING_SYSTEM }-${ ARCHITECTURE }${ LIBRARY ?? "" }${ OPERATING_SYSTEM == "windows" ? ".exe" : "" }`
+
+      - name: Construct artifact name
+        id: artifact
+        env:
+          BASE_NAME: ${{ env.PROJECT_NAME }}
+          OPERATING_SYSTEM: ${{ matrix.os }}
+          ARCHITECTURE: ${{ matrix.arch }}
+          LIBRARY: ${{ matrix.library }}
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const { BASE_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY } = process.env;
+            return `${ BASE_NAME }-${ OPERATING_SYSTEM }-${ ARCHITECTURE }${ LIBRARY ?? "" }`
+
+      - name: Build project
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CC: ${{ matrix.library == 'musl' && '/usr/bin/musl-gcc' || '' }}
+        run: go build -v -ldflags='-s -w' -o ${{ steps.executable.outputs.result }} ./source/
+
+      - name: Strip debug symbols from executable
+        run: strip ${{ steps.executable.outputs.result }}
+
+      - name: Print executable information
+        run: file ${{ steps.executable.outputs.result }} && sha256sum ${{ steps.executable.outputs.result }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.artifact.outputs.result }}
+          path: ${{ steps.executable.outputs.result }}
