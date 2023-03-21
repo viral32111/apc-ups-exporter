@@ -64,7 +64,7 @@ jobs:
           result-encoding: string
           script: |
             const { BASE_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY } = process.env;
-            return `${ BASE_NAME }-${ OPERATING_SYSTEM }-${ ARCHITECTURE }${ LIBRARY ?? "" }${ OPERATING_SYSTEM == "windows" ? ".exe" : "" }`
+            return `${ BASE_NAME }-${ OPERATING_SYSTEM }-${ ARCHITECTURE }${ LIBRARY != "" ? "-" + LIBRARY : "" }${ OPERATING_SYSTEM == "windows" ? ".exe" : "" }`
 
       - name: Construct artifact name
         id: artifact
@@ -78,7 +78,7 @@ jobs:
           result-encoding: string
           script: |
             const { BASE_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY } = process.env;
-            return `${ BASE_NAME }-${ OPERATING_SYSTEM }-${ ARCHITECTURE }${ LIBRARY ?? "" }`
+            return `${ BASE_NAME }-${ OPERATING_SYSTEM }-${ ARCHITECTURE }${ LIBRARY != "" ? "-" + LIBRARY : "" }`
 
       - name: Build project
         env:
