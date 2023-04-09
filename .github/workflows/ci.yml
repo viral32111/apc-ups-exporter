@@ -70,7 +70,10 @@ jobs:
             core.setOutput( "artifact", name );
             core.setOutput( "executable", `${name}${ OPERATING_SYSTEM == "windows" ? ".exe" : "" }` );
 
-      - name: Build project
+      - name: Tidy
+        run: go mod tidy
+
+      - name: Build
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
@@ -87,7 +90,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.name.outputs.artifact }}
-          path: ${{ steps.name.outputs.executable }}
+          path: ./${{ steps.name.outputs.executable }}
 
   docker:
     name: Docker
