@@ -2,7 +2,7 @@
 
 This is a [Prometheus exporter](https://prometheus.io/docs/instrumenting/exporters/) for the status data reported by [APC's Uninterruptible Power Supplies](https://www.apc.com/uk/en/).
 
-The status data is fetched from [apcupsd](http://www.apcupsd.org/)'s *network information server* (NIS), so [ensure it is enabled in your `apcupsd.conf` configuration file](http://www.apcupsd.org/manual/manual.html#configuration-directives-used-by-the-network-information-server).
+The status data is fetched from [apcupsd](http://www.apcupsd.org/)'s *Network Information Server* (NIS), so [ensure it is enabled in your `apcupsd.conf` configuration file](http://www.apcupsd.org/manual/manual.html#configuration-directives-used-by-the-network-information-server).
 
 I test this against my [APC Back-UPS 850VA (BE850G2-UK)](https://www.apc.com/shop/uk/en/products/APC-Back-UPS-850VA-230V-USB-Type-C-and-A-charging-ports-8-BS-1363-outlets-2-surge-/P-BE850G2-UK).
 
@@ -22,8 +22,8 @@ Checksums are available on [the release page](https://github.com/viral32111/apc-
 
 Alternatively, a [Docker image](https://github.com/users/viral32111/packages/container/package/apc-ups-exporter) is available for Linux.
 
-* Ubuntu 22.10: `ghcr.io/viral32111/apc-ups-exporter:main-ubuntu`.
-* Alpine Linux v3.17: `ghcr.io/viral32111/apc-ups-exporter:main-alpine`.
+* Ubuntu 22.10: `ghcr.io/viral32111/apc-ups-exporter:1-ubuntu`.
+* Alpine Linux v3.17: `ghcr.io/viral32111/apc-ups-exporter:1-alpine`.
 
 Run the following command to download the image and create a Docker container:
 
@@ -35,9 +35,9 @@ docker run \
     ghcr.io/viral32111/apc-ups-exporter:latest
 ```
 
-Replace the `:latest` tag on the image with your desired version/flavour (e.g., `:1.2.0-ubuntu`, `:1.2-alpine`, etc.).
+Replace the `:latest` tag on the image with your desired version/flavour (e.g., `:1.1.1-ubuntu`, `:main-alpine`, etc.).
 
-The host's network stack is usually required to connect to the network information server.
+The host's network stack is usually required to connect to the Network Information Server.
 
 ### Flags
 
@@ -48,11 +48,11 @@ Use the `--help` flag to show usage along with a list of flags with descriptions
 All of the flags are optional, with sensible default values.
 
 * `--nis-address <string>`
-  * The network information server's IPv4 address.
+  * The Network Information Server's IPv4 address.
   * Defaults to `127.0.0.1`.
   * Example: `--nis-address 192.168.0.5`.
 * `--nis-port <number>`
-  * The network information server's TCP port number.
+  * The Network Information Server's TCP port number.
   * Defaults to `3551`.
   * Example: `--nis-port 1234`.
 * `--metrics-address <string>`
@@ -74,7 +74,7 @@ All of the flags are optional, with sensible default values.
 
 ### Examples
 
-Fetch data from the network information server at `192.168.0.5` on port `3551`, and serve metrics at `/metrics` on loopback port `5000` every 15 seconds.
+Fetch data from the Network Information Server at `192.168.0.5` on port `3551`, and serve metrics at `/metrics` on loopback port `5000` every 15 seconds.
 
 ```
 $ apc-ups-exporter --nis-address 192.168.0.5
@@ -84,13 +84,13 @@ Resetting all metrics...
 Starting background metrics collection...
 Serving metrics page at http://127.0.0.1:5000/metrics...
 
-Connected to the network information server.
- Fetched status from the network information server.
+Connected to the Network Information Server.
+ Fetched status from the Network Information Server.
   Updated the status metric.
   Updated the power metrics.
   Updated the battery metrics.
   Updated the daemon metrics.
- Disconnected from the network information server.
+ Disconnected from the Network Information Server.
  Waiting 15 seconds for next collection..
 ```
 
