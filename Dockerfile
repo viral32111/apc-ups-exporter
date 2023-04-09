@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Start from the provided image
+ARG BASE_IMAGE
 FROM ghcr.io/viral32111/${BASE_IMAGE}
 
 # Add the binary from the context directory
