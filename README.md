@@ -22,8 +22,8 @@ Checksums are available on [the release page](https://github.com/viral32111/apc-
 
 Alternatively, a [Docker image](https://github.com/users/viral32111/packages/container/package/apc-ups-exporter) is available for Linux.
 
-* Ubuntu 22.10: `ghcr.io/viral32111/apc-ups-exporter:1-ubuntu`
-* Alpine Linux v3.17: `ghcr.io/viral32111/apc-ups-exporter:1-alpine`
+* Ubuntu 22.10: `ghcr.io/viral32111/apc-ups-exporter:1-ubuntu` (~130MB).
+* Alpine Linux v3.17: `ghcr.io/viral32111/apc-ups-exporter:1-alpine` (~20MB).
 
 Run the following command to download the image and create a Docker container:
 
