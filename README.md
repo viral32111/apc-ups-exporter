@@ -39,7 +39,7 @@ The image is based on [Ubuntu](https://ubuntu.com) (`ghcr.io/viral32111/apc-ups-
 Run the command below to download the image and create a container. Replace the `:latest` tag with your desired variant (e.g., `:1.1.3-ubuntu`, `:main-alpine`, etc.).
 
 ```bash
-	docker container run \
+docker container run \
 	--name apc-ups-exporter \
 	--network host \
 	--detach \
@@ -47,10 +47,6 @@ Run the command below to download the image and create a container. Replace the 
 ```
 
 The host's networking stack is often required to connect to the daemon's Network Information Server.
-
-### ⚙️ Flags
-
-
 
 ## 🖼️ Examples
 
