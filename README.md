@@ -1,80 +1,60 @@
 # APC UPS Exporter
 
+[![CI](https://github.com/viral32111/apc-ups-exporter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/viral32111/apc-ups-exporter/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/viral32111/apc-ups-exporter/actions/workflows/codeql.yml/badge.svg)](https://github.com/viral32111/apc-ups-exporter/actions/workflows/codeql.yml)
+![GitHub tag (with filter)](https://img.shields.io/github/v/tag/viral32111/apc-ups-exporter?label=Latest)
+![GitHub repository size](https://img.shields.io/github/repo-size/viral32111/apc-ups-exporter?label=Size)
+![GitHub release downloads](https://img.shields.io/github/downloads/viral32111/apc-ups-exporter/total?label=Downloads)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/viral32111/apc-ups-exporter?label=Commits)
+
 This is a [Prometheus exporter](https://prometheus.io/docs/instrumenting/exporters/) for the status data reported by [APC's Uninterruptible Power Supplies](https://www.apc.com/uk/en/).
 
 The status data is fetched from [apcupsd](http://www.apcupsd.org/)'s *Network Information Server* (NIS), so [ensure it is enabled in your `apcupsd.conf` configuration file](http://www.apcupsd.org/manual/manual.html#configuration-directives-used-by-the-network-information-server).
 
 I test this against my [APC Back-UPS 850VA (BE850G2-UK)](https://www.apc.com/shop/uk/en/products/APC-Back-UPS-850VA-230V-USB-Type-C-and-A-charging-ports-8-BS-1363-outlets-2-surge-/P-BE850G2-UK).
 
-## Usage
+## 📥 Usage
 
-### Release
+Download the [latest release](https://github.com/viral32111/apc-ups-exporter/releases/latest) for your platform. There are builds available for Linux and Windows, on 32-bit and 64-bit architectures of x86 and ARM. There are extra Linux builds to accommodate glibc and musl libraries.
 
-Download the pre-built executable from the latest stable release for your platform:
+The utility does not expect any command-line arguments. There are sensible defaults in place, so it *should* run without any configuration. However, functionality can be changed using the optional command-line flags below.
 
-* [Windows (64-bit)](https://github.com/viral32111/apc-ups-exporter/releases/latest/download/apc-ups-exporter-windows-amd64.exe)
-* [Linux (glibc) (64-bit)](https://github.com/viral32111/apc-ups-exporter/releases/latest/download/apc-ups-exporter-linux-amd64-glibc)
-* [Linux (musl) (64-bit)](https://github.com/viral32111/apc-ups-exporter/releases/latest/download/apc-ups-exporter-linux-amd64-musl)
+* `--nis-address <string>`: The Network Information Server's IPv4 address. Defaults to `127.0.0.1`.
+* `--nis-port <number>`: The Network Information Server's TCP port number. Defaults to `3551`.
+* `--metrics-address <string>`: The listening IPv4 address for the Prometheus HTTP metrics server. Defaults to `127.0.0.1`.
+* `--metrics-port <number>`: The listening TCP port number for the Promtheus HTTP metrics server. Defaults to `5000`.
+* `--metrics-path <string>`: The HTTP path to the metrics page. Defaults to `/metrics`.
+* `--metrics-interval <string>`: The number of seconds to wait between collecting metrics. Defaults to `15`.
 
-Checksums are available on [the release page](https://github.com/viral32111/apc-ups-exporter/releases/latest).
+These flags can be prefixed with either a single (`-`) or double (`--`) hyphen.
 
-### Docker
+Use the `--help` (`-h`) flag for more information.
 
-Alternatively, a [Docker image](https://github.com/users/viral32111/packages/container/package/apc-ups-exporter) is available for Linux.
+### 🐳 Docker
 
-* Ubuntu 22.10: `ghcr.io/viral32111/apc-ups-exporter:1-ubuntu` (~130MB).
-* Alpine Linux v3.17: `ghcr.io/viral32111/apc-ups-exporter:1-alpine` (~20MB).
+Alternatively, there is a [Docker image](https://github.com/users/viral32111/packages/container/package/apc-ups-exporter) available for Linux.
 
-Run the following command to download the image and create a Docker container:
+The image is based on [Ubuntu](https://ubuntu.com) (`ghcr.io/viral32111/apc-ups-exporter:latest-ubuntu`) weighing in at roughly 130 MiB. However, there is a variant based on [Alpine Linux](https://alpinelinux.org) (`ghcr.io/viral32111/apc-ups-exporter:latest-alpine`) which is much lighter at roughly 20 MiB.
 
+Run the command below to download the image and create a container. Replace the `:latest` tag with your desired variant (e.g., `:1.1.3-ubuntu`, `:main-alpine`, etc.).
+
+```bash
+	docker container run \
+	--name apc-ups-exporter \
+	--network host \
+	--detach \
+	ghcr.io/viral32111/apc-ups-exporter:1
 ```
-docker run \
-    --name apc-ups-exporter \
-    --network host \
-    --detach \
-    ghcr.io/viral32111/apc-ups-exporter:latest
-```
 
-Replace the `:latest` tag on the image with your desired version/flavour (e.g., `:1.1.1-ubuntu`, `:main-alpine`, etc.).
+The host's networking stack is often required to connect to the daemon's Network Information Server.
 
-The host's network stack is usually required to connect to the Network Information Server.
+### ⚙️ Flags
 
-### Flags
 
-The flags can be prefixed with either a single hyphen (`-`) or a double hyphen (`--`).
 
-Use the `--help` flag to show usage along with a list of flags with descriptions and default values.
+## 🖼️ Examples
 
-All of the flags are optional, with sensible default values.
-
-* `--nis-address <string>`
-  * The Network Information Server's IPv4 address.
-  * Defaults to `127.0.0.1`.
-  * Example: `--nis-address 192.168.0.5`.
-* `--nis-port <number>`
-  * The Network Information Server's TCP port number.
-  * Defaults to `3551`.
-  * Example: `--nis-port 1234`.
-* `--metrics-address <string>`
-  * The listening IPv4 address for the Prometheus HTTP metrics server.
-  * Defaults to `127.0.0.1`.
-  * Example: `--metrics-address 192.168.0.2`.
-* `--metrics-port <number>`
-  * The listening TCP port number for the Promtheus HTTP metrics server.
-  * Defaults to `5000`.
-  * Example: `--metrics-port 8080`.
-* `--metrics-path <string>`
-  * The HTTP path to the metrics page.
-  * Defaults to `/metrics`.
-  * Example: `--metrics-path /stats`.
-* `--metrics-interval <string>`
-  * The number of seconds to wait between collecting metrics.
-  * Defaults to `15`.
-  * Example: `--metrics-interval 5`.
-
-### Examples
-
-Fetch data from the Network Information Server at `192.168.0.5` on port `3551`, and serve metrics at `/metrics` on loopback port `5000` every 15 seconds.
+Serve metrics at `/metrics` the default loopback port `5000` using data fetched every 15 seconds from the Network Information Server at `192.168.0.5` on the default port `3551`:
 
 ```
 $ apc-ups-exporter --nis-address 192.168.0.5
@@ -86,42 +66,46 @@ Serving metrics page at http://127.0.0.1:5000/metrics...
 
 Connected to the Network Information Server.
  Fetched status from the Network Information Server.
-  Updated the status metric.
-  Updated the power metrics.
-  Updated the battery metrics.
-  Updated the daemon metrics.
+	Updated the status metric.
+	Updated the power metrics.
+	Updated the battery metrics.
+	Updated the daemon metrics.
  Disconnected from the Network Information Server.
  Waiting 15 seconds for next collection..
 ```
 
-## Metrics
+## 📰 Metrics
 
 The following Prometheus metrics are exported:
 
-* Status
-  * `ups_status`
+### Status
 
-* Power
-  * `ups_power_input_expect_voltage`
-  * `ups_power_output_maximum_wattage`
-  * `ups_power_line_voltage`
-  * `ups_power_load_percent`
+* `ups_status`
 
-* Battery
-  * `ups_battery_output_actual_voltage`
-  * `ups_battery_time_spent_latest_seconds`
-  * `ups_battery_time_spent_total_seconds`
-  * `ups_battery_remaining_charge_percent`
-  * `ups_battery_remaining_time_minutes`
+### Power
 
-* Daemon
-  * `ups_daemon_remaining_charge_percent`
-  * `ups_daemon_remaining_time_minutes`
-  * `ups_daemon_timeout_minutes`
-  * `ups_daemon_transfer_count`
-  * `ups_daemon_start_timestamp`
+* `ups_power_input_expect_voltage`
+* `ups_power_output_maximum_wattage`
+* `ups_power_line_voltage`
+* `ups_power_load_percent`
 
-## License
+### Battery
+
+* `ups_battery_output_actual_voltage`
+* `ups_battery_time_spent_latest_seconds`
+* `ups_battery_time_spent_total_seconds`
+* `ups_battery_remaining_charge_percent`
+* `ups_battery_remaining_time_minutes`
+
+### Daemon
+
+* `ups_daemon_remaining_charge_percent`
+* `ups_daemon_remaining_time_minutes`
+* `ups_daemon_timeout_minutes`
+* `ups_daemon_transfer_count`
+* `ups_daemon_start_timestamp`
+
+## ⚖️ License
 
 Copyright (C) 2022-2023 [viral32111](https://viral32111.com).
 
