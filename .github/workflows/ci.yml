@@ -11,36 +11,30 @@ on:
     branches:
       - '**'
     tags:
-     - '*.*.*'
+      - '*.*.*'
   workflow_dispatch:
 
 env:
-  EXECUTABLE_BASE_NAME: apc-ups-exporter
-  DOCKER_IMAGE_NAME: apc-ups-exporter
+  PROJECT_NAME: apc-ups-exporter
   DOCKER_REGISTRY_DOMAIN: ghcr.io
+  DOCKER_IMAGE_NAME: apc-ups-exporter
 
 jobs:
   build:
     name: Build
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        name: [ 'Windows', 'Linux - glibc', 'Linux - musl' ]
-        include:
-          - name: Windows
-            runner: windows-2022
-            os: windows
-            arch: amd64
-          - name: Linux - glibc
-            runner: ubuntu-22.04
-            os: linux
-            arch: amd64
+        operatingSystem: [ 'linux', 'windows' ]
+        architecture: [ 'amd64', '386', 'arm64', 'arm' ]
+        library: [ '', 'glibc', 'musl' ]
+        exclude:
+          - operatingSystem: windows
             library: glibc
-          - name: Linux - musl
-            runner: ubuntu-22.04
-            os: linux
-            arch: amd64
+          - operatingSystem: windows
             library: musl
+          - operatingSystem: linux
+            library: ''
     permissions:
       contents: read
     steps:
@@ -56,38 +50,39 @@ jobs:
         if: ${{ matrix.library == 'musl' }}
         run: sudo apt-get install --no-install-recommends --yes musl-tools
 
-      - name: Construct artifact & executable names
-        id: name
+      - name: Create artifact & executable name
+        id: names
         env:
-          OPERATING_SYSTEM: ${{ matrix.os }}
-          ARCHITECTURE: ${{ matrix.arch }}
+          PROJECT_NAME: ${{ env.PROJECT_NAME }}
+          OPERATING_SYSTEM: ${{ matrix.operatingSystem }}
+          ARCHITECTURE: ${{ matrix.architecture }}
           LIBRARY: ${{ matrix.library }}
         uses: actions/github-script@v6
         with:
           script: |
-            const { EXECUTABLE_BASE_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY } = process.env;
-            const name = `${ EXECUTABLE_BASE_NAME }-${ OPERATING_SYSTEM }-${ ARCHITECTURE }${ LIBRARY != "" ? "-" + LIBRARY : "" }`;
-            core.setOutput( "artifact", name );
-            core.setOutput( "executable", `${name}${ OPERATING_SYSTEM == "windows" ? ".exe" : "" }` );
+            const { PROJECT_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY } = process.env;
 
-      - name: Build
+            const artifactName = [ PROJECT_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY ]
+              .filter( value => value != '' )
+              .join( '-' );
+
+            const executableName = artifactName + ( OPERATING_SYSTEM == 'windows' ? '.exe' : '' );
+
+            core.setOutput( 'artifact', artifactName );
+            core.setOutput( 'executable', executableName );
+
+      - name: Build executable
         env:
-          GOOS: ${{ matrix.os }}
-          GOARCH: ${{ matrix.arch }}
+          GOOS: ${{ matrix.operatingSystem }}
+          GOARCH: ${{ matrix.architecture }}
           CC: ${{ matrix.library == 'musl' && '/usr/bin/musl-gcc' || '' }}
-        run: go build -v -ldflags='-s -w' -o ${{ steps.name.outputs.executable }} ./source/
+        run: go build -v -ldflags='-s -w' -o ${{ steps.names.outputs.executable }} ./source/
 
-      - name: Strip debug symbols from executable
-        run: strip ${{ steps.name.outputs.executable }}
-
-      - name: Display executable information
-        run: file ${{ steps.name.outputs.executable }} && sha256sum ${{ steps.name.outputs.executable }}
-
-      - name: Upload executable as artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.name.outputs.artifact }}
-          path: ./${{ steps.name.outputs.executable }}
+          name: ${{ steps.names.outputs.artifact }}
+          path: ${{ steps.names.outputs.executable }}
 
   docker:
     name: Docker
@@ -95,16 +90,80 @@ jobs:
     needs: build
     strategy:
       matrix:
-        name: [ 'Ubuntu', 'Alpine' ]
+        distribution: [ 'ubuntu', 'alpine' ]
+        architecture: [ 'amd64', 'arm64' ]
         include:
-          - name: Ubuntu
-            suffix: ubuntu
-            image: ubuntu:22.10
+          - distribution: Ubuntu
+            image: ubuntu:23.04
             library: glibc
-          - name: Alpine
-            suffix: alpine
-            image: alpine:3.17
+          - distribution: alpine
+            image: alpine:3.18
             library: musl
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v2
+        with:
+          platforms: linux/${{ matrix.architecture }}
+
+      - name: Login to GitHub Container Registry
+        if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.DOCKER_REGISTRY_DOMAIN }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.PROJECT_NAME }}-linux-${{ matrix.architecture }}-${{ matrix.library }}
+          path: artifact
+
+      - name: Create metadata for Docker image
+        id: metadata
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}
+          flavor: |
+            latest=${{ matrix.distribution == 'ubuntu' }}
+            suffix=-${{ matrix.distribution }}-${{ matrix.architecture }},onlatest=true
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}.{{minor}}.{{patch}}
+          labels: |
+            org.opencontainers.image.title=APC UPS Exporter (${{matrix.distribution}}-based)
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+            com.docker.extension.publisher-url=https://viral32111.com
+
+      - name: Build & push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          push: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
+          file: Dockerfile
+          context: artifact
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          platforms: linux/${{ matrix.architecture }}
+          provenance: false
+          no-cache: true
+          pull: true
+          build-args: BASE_IMAGE=${{ matrix.image }}
+
+  maintenance:
+    name: Maintenance
+    runs-on: ubuntu-22.04
+    needs: docker
     permissions:
       contents: read
       packages: write
@@ -114,84 +173,109 @@ jobs:
 
       - name: Setup Docker
         uses: docker/setup-buildx-action@v2
-        with:
-          platforms: linux/amd64
-          driver-opts: image=moby/buildkit:v0.10.6
 
       - name: Login to GitHub Container Registry
-        if: ${{ github.event_name == 'push' && github.event.pull_request == null && !startsWith( github.ref, 'refs/heads/dependabot/' ) }}
+        if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
         uses: docker/login-action@v2
         with:
           registry: ${{ env.DOCKER_REGISTRY_DOMAIN }}
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download executable artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ env.EXECUTABLE_BASE_NAME }}-linux-amd64-${{ matrix.library }}
-          path: ./artifact/
+      - name: Create Docker image manifests
+        run: |
+          docker manifest create ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest \
+            --amend ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu-amd64 \
+            --amend ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu-arm64
+          docker manifest annotate --os linux --arch amd64 \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu-amd64
+          docker manifest annotate --os linux --arch arm64 \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu-arm64
 
-      - name: Create metadata for Docker image
-        id: metadata
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}
-          flavor: |
-            latest=${{ matrix.name == 'Ubuntu' }}
-            suffix=-${{ matrix.suffix }},onlatest=${{ matrix.name == 'Alpine' }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{major}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}.{{minor}}.{{patch}}
-          labels: |
-            org.opencontainers.image.title=APC UPS Exporter (${{matrix.name}}-based)
-            org.opencontainers.image.vendor=${{ github.repository_owner }}
-            com.docker.extension.publisher-url=https://viral32111.com
+          docker manifest create ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu \
+            --amend ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu-amd64 \
+            --amend ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu-arm64
+          docker manifest annotate --os linux --arch amd64 \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu-amd64
+          docker manifest annotate --os linux --arch arm64 \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu-arm64
 
-      - name: Build & push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          push: ${{ github.event_name == 'push' && github.event.pull_request == null && !startsWith( github.ref, 'refs/heads/dependabot/' ) }}
-          file: ./Dockerfile
-          context: ./artifact/
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
-          build-args: BASE_IMAGE=${{ matrix.image }}
-          no-cache: true
-          pull: true
+          docker manifest create ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu \
+            --amend ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu-amd64 \
+            --amend ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu-arm64
+          docker manifest annotate --os linux --arch amd64 \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu-amd64
+          docker manifest annotate --os linux --arch arm64 \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu-arm64
 
-      - name: Delete untagged Docker images
-        if: ${{ github.event_name == 'push' && github.event.pull_request == null && !startsWith( github.ref, 'refs/heads/dependabot/' ) }}
+          docker manifest create ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine \
+            --amend ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine-amd64 \
+            --amend ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine-arm64
+          docker manifest annotate --os linux --arch amd64 \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine-amd64
+          docker manifest annotate --os linux --arch arm64 \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine-arm64
+
+      - name: Push Docker image manifests
+        if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
+        run: |
+          docker manifest push \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu \
+            ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine
+
+      - name: Delete old Docker images
+        if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
         uses: snok/container-retention-policy@v2
         with:
           image-names: ${{ env.DOCKER_IMAGE_NAME }}
-          cut-off: 0 seconds ago UTC
-          keep-at-least: 0
+          cut-off: 24 hours ago UTC
+          keep-at-least: 1
           untagged-only: true
+          skip-tags: latest
           account-type: personal
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN_PACKAGES }}
 
   release:
     name: Release
     runs-on: ubuntu-22.04
-    needs: docker
-    if: ${{ github.event_name == 'push' && github.event.pull_request == null && !startsWith( github.ref, 'refs/heads/dependabot/' ) && github.ref_type == 'tag' }}
+    needs: build
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     permissions:
       contents: write
     steps:
-      - name: Clone repository
-        uses: actions/checkout@v3
-
-      - name: Download executable artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+
+      - name: Move executables
+        run: |
+          mv -v artifacts/${{ env.PROJECT_NAME }}-*/${{ env.PROJECT_NAME }}-* ./
+          rm -v -r artifacts
+
+      - name: Calculate checksums
+        run: |
+          md5sum ${{ env.PROJECT_NAME }}-* > MD5SUMS.txt
+          sha1sum ${{ env.PROJECT_NAME }}-* > SHA1SUMS.txt
+          sha256sum ${{ env.PROJECT_NAME }}-* > SHA256SUMS.txt
+          sha512sum ${{ env.PROJECT_NAME }}-* > SHA512SUMS.txt
 
       - name: Create draft release
         uses: softprops/action-gh-release@v1
         with:
           draft: true
           tag_name: ${{ github.ref_name }}
-          body: ${{ github.ref_name }}
-          files: ${{ env.EXECUTABLE_BASE_NAME }}-*/*
+          files: |
+            ${{ env.PROJECT_NAME }}-*
+            *SUMS.txt
           token: ${{ secrets.GITHUB_TOKEN }}

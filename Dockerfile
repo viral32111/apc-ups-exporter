@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Start from the provided image
-ARG BASE_IMAGE
+ARG BASE_IMAGE=ubuntu:23.04
 FROM ghcr.io/viral32111/${BASE_IMAGE}
 
 # Add the binary from the context directory
@@ -13,5 +13,5 @@ USER ${USER_ID}:${USER_ID}
 # Publish the default metrics port
 EXPOSE 5000/tcp
 
-# Launch
+# Launch the exporter
 ENTRYPOINT [ "apc-ups-exporter" ]
