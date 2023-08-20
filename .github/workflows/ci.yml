@@ -158,7 +158,8 @@ jobs:
           provenance: false
           no-cache: true
           pull: true
-          build-args: BASE_IMAGE=${{ matrix.image }}
+          build-args: |
+            BASE_IMAGE=${{ matrix.image }}
 
   maintenance:
     name: Maintenance

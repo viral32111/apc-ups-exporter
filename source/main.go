@@ -11,7 +11,7 @@ import (
 // Metadata
 const (
 	PROJECT_NAME = "APC UPS Exporter"
-	PROJECT_VERSION = "1.0.0"
+	PROJECT_VERSION = "1.1.3"
 
 	AUTHOR_NAME = "viral32111"
 	AUTHOR_WEBSITE = "https://viral32111.com"
@@ -39,8 +39,8 @@ func main() {
 	// Set a custom help message
 	flag.Usage = func() {
 		fmt.Printf( "%s, v%s, by %s (%s).\n", PROJECT_NAME, PROJECT_VERSION, AUTHOR_NAME, AUTHOR_WEBSITE )
-
 		fmt.Printf( "\nUsage: %s [-h/-help] [-nis-address <IPv4 address>] [-nis-port <number>] [-metrics-address <IPv4 address>] [-metrics-port <number>] [-metrics-path <string>] [-metrics-interval <seconds>]\n", os.Args[ 0 ] )
+
 		flag.PrintDefaults()
 
 		os.Exit( 1 ) // By default it exits with code 2
