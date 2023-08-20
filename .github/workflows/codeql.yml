@@ -3,16 +3,16 @@ name: CodeQL
 on:
   push:
     paths:
-     - '**'
+      - '**'
     branches:
-     - '**'
+      - '**'
   schedule:
     - cron: '0 0 * * 0'
 
 jobs:
   codeql:
     name: CodeQL
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
