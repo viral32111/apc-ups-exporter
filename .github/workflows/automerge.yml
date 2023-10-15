@@ -20,7 +20,7 @@ jobs:
       issues: write
     steps:
       - name: Clone repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fetch Dependabot metadata
         id: metadata
