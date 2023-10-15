@@ -166,6 +166,7 @@ jobs:
     name: Maintenance
     runs-on: ubuntu-22.04
     needs: docker
+    if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
     permissions:
       contents: read
       packages: write
@@ -177,7 +178,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
-        if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
         uses: docker/login-action@v2
         with:
           registry: ${{ env.DOCKER_REGISTRY_DOMAIN }}
@@ -187,7 +187,6 @@ jobs:
       #- name: Combine Docker image tags
       #  uses: viral32111/fat-manifest@v1
       #  with:
-      #    push: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
       #    image: ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}
       #    tags: |
       #      type=latest,variants=ubuntu;alpine,architectures=amd64;arm64
@@ -255,7 +254,6 @@ jobs:
             ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine-arm64
 
       - name: Push Docker image manifests
-        if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
         run: |
           docker manifest push ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest
           docker manifest push ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:latest-ubuntu
@@ -263,7 +261,6 @@ jobs:
           docker manifest push ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine
 
       - name: Delete old Docker images
-        if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
         uses: snok/container-retention-policy@v2
         with:
           image-names: ${{ env.DOCKER_IMAGE_NAME }}
