@@ -7,7 +7,7 @@ on:
       - 'go.mod'
       - 'go.sum'
       - 'Dockerfile'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/*.yml'
     branches:
       - '**'
     tags:
@@ -137,6 +137,7 @@ jobs:
             latest=${{ matrix.distribution == 'ubuntu' }}
             suffix=-${{ matrix.distribution }}-${{ matrix.architecture }},onlatest=true
           tags: |
+            type=ref,event=pr
             type=ref,event=branch
             type=semver,pattern={{major}}
             type=semver,pattern={{major}}.{{minor}}
@@ -182,6 +183,34 @@ jobs:
           registry: ${{ env.DOCKER_REGISTRY_DOMAIN }}
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      #- name: Combine Docker image tags
+      #  uses: viral32111/fat-manifest@v1
+      #  with:
+      #    push: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
+      #    image: ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}
+      #    tags: |
+      #      type=latest,variants=ubuntu;alpine,architectures=amd64;arm64
+      #      type=ref,event=branch,variants=ubuntu;alpine,architectures=amd64;arm64
+      #      type=semver,pattern={{major}},variants=ubuntu;alpine,architectures=amd64;arm64
+      #      type=semver,pattern={{major}}.{{minor}},variants=ubuntu;alpine,architectures=amd64;arm64
+      #      type=semver,pattern={{major}}.{{minor}}.{{patch}},variants=ubuntu;alpine,architectures=amd64;arm64
+      #      type=latest,variants=ubuntu,architectures=amd64;arm64
+
+          # latest-ubuntu-amd64, latest-ubuntu-arm64 > latest-ubuntu
+          # latest-alpine-amd64, latest-alpine-arm64 > latest-alpine
+
+          # main-ubuntu-amd64, main-ubuntu-arm64 > main-ubuntu
+          # main-alpine-amd64, main-alpine-arm64 > main-alpine
+
+          # 1.0.0-ubuntu-amd64, 1.0.0-ubuntu-arm64 > 1.0.0-ubuntu
+          # 1.0.0-alpine-amd64, 1.0.0-alpine-arm64 > 1.0.0-alpine
+          # 1.0-ubuntu-amd64, 1.0-ubuntu-arm64 > 1.0-ubuntu
+          # 1.0-alpine-amd64, 1.0-alpine-arm64 > 1.0-alpine
+          # 1-ubuntu-amd64, 1-ubuntu-arm64 > 1-ubuntu
+          # 1-alpine-amd64, 1-alpine-arm64 > 1-alpine
+
+          # latest-ubuntu-amd64, latest-ubuntu-amd64 > latest
 
       - name: Create Docker image manifests
         run: |
