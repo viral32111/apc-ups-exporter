@@ -57,7 +57,7 @@ jobs:
           OPERATING_SYSTEM: ${{ matrix.operatingSystem }}
           ARCHITECTURE: ${{ matrix.architecture }}
           LIBRARY: ${{ matrix.library }}
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const { PROJECT_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY } = process.env;
