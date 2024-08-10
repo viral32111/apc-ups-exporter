@@ -51,7 +51,7 @@ func main() {
 
 	// Require a valid IP address for the Network Information Server
 	nisAddress := net.ParseIP( flagNisAddress )
-	if ( flagNisAddress == "" || nisAddress == nil || nisAddress.To4() == nil ) { exitWithErrorMessage( "Invalid IPv4 address for apcupsd's Nnetwork Information Server." ) }
+	if ( flagNisAddress == "" || nisAddress == nil || nisAddress.To4() == nil ) { exitWithErrorMessage( "Invalid IPv4 address for apcupsd's Network Information Server." ) }
 
 	// Require a valid port number for the Network Information Server
 	if ( flagNisPort <= 0 || flagNisPort >= 65536 ) { exitWithErrorMessage( "Invalid port number for apcupsd's Network Information Server." ) }

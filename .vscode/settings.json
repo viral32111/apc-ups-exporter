@@ -2,7 +2,14 @@
 	"[go]": {
 		"editor.formatOnSave": false,
 		"editor.codeActionsOnSave": {
-			"source.organizeImports": false
+			"source.organizeImports": "never"
 		}
-	}
+	},
+
+	"cSpell.language": "en-GB",
+	"cSpell.words": [
+		"apcupsd",
+		"promauto",
+		"promhttp"
+	]
 }

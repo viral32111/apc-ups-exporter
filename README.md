@@ -22,7 +22,7 @@ The utility does not expect any command-line arguments. There are sensible defau
 * `--nis-address <string>`: The Network Information Server's IPv4 address. Defaults to `127.0.0.1`.
 * `--nis-port <number>`: The Network Information Server's TCP port number. Defaults to `3551`.
 * `--metrics-address <string>`: The listening IPv4 address for the Prometheus HTTP metrics server. Defaults to `127.0.0.1`.
-* `--metrics-port <number>`: The listening TCP port number for the Promtheus HTTP metrics server. Defaults to `5000`.
+* `--metrics-port <number>`: The listening TCP port number for the Prometheus HTTP metrics server. Defaults to `5000`.
 * `--metrics-path <string>`: The HTTP path to the metrics page. Defaults to `/metrics`.
 * `--metrics-interval <string>`: The number of seconds to wait between collecting metrics. Defaults to `15`.
 
@@ -103,7 +103,7 @@ The following Prometheus metrics are exported:
 
 ## ⚖️ License
 
-Copyright (C) 2022-2023 [viral32111](https://viral32111.com).
+Copyright (C) 2022 [viral32111](https://viral32111.com).
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

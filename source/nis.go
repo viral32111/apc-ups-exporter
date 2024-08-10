@@ -90,7 +90,7 @@ func ( networkInformationServer *NetworkInformationServer ) ReceiveResponse() ( 
 		readDataError := binary.Read( connectionReader, binary.BigEndian, dataBytes )
 		if readDataError != nil { return "", readDataError }
 
-		// Add data to the endn of the buffer
+		// Add data to the end of the buffer
 		_, appendError := buffer.Write( dataBytes )
 		if appendError != nil { return "", appendError }
 
