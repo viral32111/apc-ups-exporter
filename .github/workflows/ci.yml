@@ -260,16 +260,15 @@ jobs:
           docker manifest push ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-ubuntu
           docker manifest push ${{ env.DOCKER_REGISTRY_DOMAIN }}/${{ github.repository_owner }}/${{ env.DOCKER_IMAGE_NAME }}:${{ github.ref_name }}-alpine
 
-      - name: Delete old Docker images
-        uses: snok/container-retention-policy@v2
+      - name: Delete stale Docker images
+        if: ${{ github.event_name != 'pull_request' && !startsWith( github.ref_name, 'dependabot/' ) }}
+        uses: actions/delete-package-versions@v5
         with:
-          image-names: ${{ env.DOCKER_IMAGE_NAME }}
-          cut-off: 24 hours ago UTC
-          keep-at-least: 1
-          untagged-only: true
-          skip-tags: latest
-          account-type: personal
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN_PACKAGES }}
+          package-type: container
+          package-name: ${{ env.DOCKER_IMAGE_NAME }}
+          delete-only-untagged-versions: true
+          min-versions-to-keep: 1
+          ignore-versions: latest
 
   release:
     name: Release
