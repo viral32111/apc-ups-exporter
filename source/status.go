@@ -28,6 +28,7 @@ type Status struct {
 		ModelName string // MODEL
 		FirmwareRevision string // FIRMWARE
 		SerialNumber string // SERIALNO
+		ManufacturedAt time.Time // MANDATE - SmartUPS X 3000
 
 		// Load
 		LoadPercent float64 // LOADPCT
@@ -35,12 +36,20 @@ type Status struct {
 		// Line voltage
 		LineVoltage float64 // LINEV
 		LineVoltageFluctuationSensitivity string // SENSE
+		MaximumLineVoltage float64 // MAXLINEV - SmartUPS X 3000
+		MinimumLineVoltage float64 // MINLINEV - SmartUPS X 3000
+		OutputVoltage float64 // OUTPUTV - SmartUPS X 3000
+		LineFrequency float64 // LINEFREQ - SmartUPS X 3000
 
 		// Delay between alarm beeps
 		AlarmIntervalSeconds float64 // ALARMDEL
 
 		// Results of the last self-test
 		SelfTestResult string // SELFTEST
+		SelfTestInterval float64 // STESTI - SmartUPS X 3000
+
+		// Internal temperature (in Celsius)
+		Temperature float64 // ITEMP - SmartUPS X 3000
 
 		// Data about the battery
 		Battery struct {
@@ -48,6 +57,8 @@ type Status struct {
 			RemainingRuntimeMinutes float64 // TIMELEFT
 			OutputVoltage float64 // BATTV
 			LastReplacementDate time.Time // BATTDATE
+			LowBatterySignalThreshold float64 // DLOWBATT - SmartUPS X 3000
+			ExternalCount float64 // EXTBATTS - SmartUPS X 3000
 		}
 
 		// Expected power values
@@ -103,6 +114,7 @@ type Status struct {
 
 				// Reason for the last transfer
 				LastReason string // LASTXFER
+				LastAt time.Time // XOFFBATT - SmartUPS X 3000
 
 				// Line voltage below & above to trigger a transfer to battery
 				LowLineVoltage float64 // LOTRANS
@@ -139,11 +151,13 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 		if parseError != nil { return Status{}, parseError }
 
 		// Remove any trailing labels from the value
-		value = strings.TrimSuffix( value, " Volts" )
-		value = strings.TrimSuffix( value, " Seconds" )
-		value = strings.TrimSuffix( value, " Minutes" )
-		value = strings.TrimSuffix( value, " Percent" )
+		value = strings.TrimSuffix( value, " Volts" ) // e.g., LINEV
+		value = strings.TrimSuffix( value, " Seconds" ) // e.g., MAXTIME
+		value = strings.TrimSuffix( value, " Minutes" ) // e.g., TIMELEFT
+		value = strings.TrimSuffix( value, " Percent" ) // e.g., LOADPCT
 		value = strings.TrimSuffix( value, " Watts" )
+		value = strings.TrimSuffix( value, " Hz" ) // e.g., LINEFREQ
+		value = strings.TrimSuffix( value, " C" ) // e.g., ITEMP
 
 		// Assign the value to the correct property in the structure
 		switch key {
@@ -242,8 +256,40 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 				status.Daemon.Configuration.MaximumTimeoutMinutes = parsedFloat
 			}
 
+			// SmartUPS X 3000 - "The maximum line voltage since the last STATUS as returned by the UPS."
+			case "MAXLINEV": {
+				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				if floatParseError != nil { return Status{}, floatParseError }
+
+				status.UPS.MaximumLineVoltage = parsedFloat
+			}
+
+			// SmartUPS X 3000 - "The minimum line voltage since the last STATUS as returned by the UPS."
+			case "MINLINEV": {
+				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				if floatParseError != nil { return Status{}, floatParseError }
+
+				status.UPS.MinimumLineVoltage = parsedFloat
+			}
+
+			// SmartUPS X 3000 - "The voltage the UPS is supplying to your equipment."
+			case "OUTPUTV": {
+				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				if floatParseError != nil { return Status{}, floatParseError }
+
+				status.UPS.OutputVoltage = parsedFloat
+			}
+
 			// "The sensitivity level of the UPS to line voltage fluctuations"
 			case "SENSE": status.UPS.LineVoltageFluctuationSensitivity = value
+
+			// SmartUPS X 3000 - "The remaining runtime below which the UPS sends the low battery signal. At this point apcupsd will force an immediate emergency shutdown. "
+			case "DLOWBATT": {
+				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				if floatParseError != nil { return Status{}, floatParseError }
+
+				status.UPS.Battery.LowBatterySignalThreshold = parsedFloat
+			}
 
 			// "The line voltage below which the UPS will switch to batteries"
 			case "LOTRANS": {
@@ -259,6 +305,14 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Battery.Transfer.HighLineVoltage = parsedFloat
+			}
+
+			// SmartUPS X 3000 - "The internal UPS temperature as supplied by the UPS."
+			case "ITEMP": {
+				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				if floatParseError != nil { return Status{}, floatParseError }
+
+				status.UPS.Temperature = parsedFloat
 			}
 
 			// "The delay period for the UPS alarm"
@@ -279,6 +333,14 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Battery.OutputVoltage = parsedFloat
+			}
+
+			// SmartUPS X 3000 - "The line frequency in Hertz as given by the UPS."
+			case "LINEFREQ": {
+				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				if floatParseError != nil { return Status{}, floatParseError }
+
+				status.UPS.LineFrequency = parsedFloat
 			}
 
 			// "The reason for the last transfer to batteries"
@@ -308,8 +370,32 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 				status.Daemon.Battery.TimeSpent.Total = parsedFloat
 			}
 
+			// SmartUPS X 3000 - "Time and date of last transfer from batteries, or N/A."
+			case "XOFFBATT": {
+				if ( value == "N/A" ) {
+					status.Daemon.Battery.Transfer.LastAt = time.Unix(0, 0)
+				} else {
+					parsedDate, dateParseError := time.Parse( "2006-01-02 15:04:05 -0700", value )
+					if dateParseError != nil { return Status{}, dateParseError }
+
+					status.Daemon.Battery.Transfer.LastAt = parsedDate
+				}
+			}
+
 			// "The results of the last self test"
 			case "SELFTEST": status.UPS.SelfTestResult = value
+
+			// SmartUPS X 3000 - "The interval in hours between automatic self tests."
+			case "STESTI": {
+				if (value == "OFF") {
+					status.UPS.SelfTestInterval = -1
+				}
+
+				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				if floatParseError != nil { return Status{}, floatParseError }
+
+				status.UPS.SelfTestInterval = parsedFloat
+			}
 
 			// "Status flag. English version is given by STATUS"
 			case "STATFLAG": {
@@ -317,6 +403,17 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 				if intParseError != nil { return Status{}, intParseError }
 
 				status.UPS.StatusFlag = parsedInt
+			}
+
+			// SmartUPS X 3000 - "The date the UPS was manufactured."
+			case "MANDATE": {
+				parsedDate, dateParseError := time.Parse( "2006-01-02", value )
+				if dateParseError != nil {
+					parsedDate, dateParseError = time.Parse( "01/02/2006", value ) // SmartUPS X 3000 reports date in MM/DD/YYYY format - https://github.com/viral32111/apc-ups-exporter/issues/30
+					if dateParseError != nil { return Status{}, dateParseError }
+				}
+
+				status.UPS.ManufacturedAt = parsedDate
 			}
 
 			// "The UPS serial number"
@@ -347,6 +444,14 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Expect.BatteryOutputVoltage = parsedFloat
+			}
+
+			// SmartUPS X 3000 - "The number of external batteries as defined by the user. A correct number here helps the UPS compute the remaining runtime more accurately.""
+			case "EXTBATTS": {
+				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				if floatParseError != nil { return Status{}, floatParseError }
+
+				status.UPS.Battery.ExternalCount = parsedFloat
 			}
 
 			// "The maximum power in Watts that the UPS is designed to supply"

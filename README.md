@@ -36,7 +36,7 @@ Alternatively, there is a [Docker image](https://github.com/users/viral32111/pac
 
 The image is based on [Ubuntu](https://ubuntu.com) (`ghcr.io/viral32111/apc-ups-exporter:latest-ubuntu`) weighing in at roughly 130 MiB. However, there is a variant based on [Alpine Linux](https://alpinelinux.org) (`ghcr.io/viral32111/apc-ups-exporter:latest-alpine`) which is much lighter at roughly 20 MiB.
 
-Run the command below to download the image and create a container. Replace the `:latest` tag with your desired variant (e.g., `:1.1.3-ubuntu`, `:main-alpine`, etc.).
+Run the command below to download the image and create a container. Replace the `:latest` tag with your desired variant (e.g., `:1.2.0-ubuntu`, `:main-alpine`, etc.).
 
 ```bash
 docker container run \
@@ -63,6 +63,7 @@ Serving metrics page at http://127.0.0.1:5000/metrics...
 Connected to the Network Information Server.
  Fetched status from the Network Information Server.
 	Updated the status metric.
+	Updated the temperature metric.
 	Updated the power metrics.
 	Updated the battery metrics.
 	Updated the daemon metrics.
@@ -78,11 +79,19 @@ The following Prometheus metrics are exported:
 
 * `ups_status`
 
+### Temperature
+
+* `ups_temperature_celsius`
+
 ### Power
 
 * `ups_power_input_expect_voltage`
 * `ups_power_output_maximum_wattage`
 * `ups_power_line_voltage`
+* `ups_power_line_maximum_voltage`
+* `ups_power_line_minimum_voltage`
+* `ups_power_line_frequency_hertz`
+* `ups_power_output_voltage`
 * `ups_power_load_percent`
 
 ### Battery
@@ -92,6 +101,8 @@ The following Prometheus metrics are exported:
 * `ups_battery_time_spent_total_seconds`
 * `ups_battery_remaining_charge_percent`
 * `ups_battery_remaining_time_minutes`
+* `ups_battery_low_threshold_minutes`
+* `ups_battery_count`
 
 ### Daemon
 

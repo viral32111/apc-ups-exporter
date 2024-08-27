@@ -11,7 +11,7 @@ import (
 // Metadata
 const (
 	PROJECT_NAME = "APC UPS Exporter"
-	PROJECT_VERSION = "1.1.3"
+	PROJECT_VERSION = "1.2.0"
 
 	AUTHOR_NAME = "viral32111"
 	AUTHOR_WEBSITE = "https://viral32111.com"
@@ -128,10 +128,18 @@ func updateMetrics( nisAddress net.IP, nisPort int ) {
 	}
 	fmt.Println( "  Updated the status metric." )
 
+	// Update temperature metric
+	metricTemperature.Set( status.UPS.Temperature )
+	fmt.Println( "  Updated the temperature metric." )
+
 	// Update power metrics
 	metricPowerInputExpectVoltage.Set( status.UPS.Expect.MainsInputVoltage )
 	metricPowerOutputWattage.Set( status.UPS.Expect.PowerOutputWattage )
 	metricPowerLineVoltage.Set( status.UPS.LineVoltage )
+	metricPowerMaximumLineVoltage.Set( status.UPS.MaximumLineVoltage )
+	metricPowerMinimumLineVoltage.Set( status.UPS.MinimumLineVoltage )
+	metricPowerLineFrequency.Set( status.UPS.LineFrequency )
+	metricPowerOutputVoltage.Set( status.UPS.OutputVoltage )
 	metricPowerLoadPercent.Set( status.UPS.LoadPercent )
 	fmt.Println( "  Updated the power metrics." )
 
@@ -142,8 +150,10 @@ func updateMetrics( nisAddress net.IP, nisPort int ) {
 	metricBatteryTimeSpentTotalSeconds.Set( status.Daemon.Battery.TimeSpent.Total )
 	metricBatteryRemainingChargePercent.Set( status.UPS.Battery.ChargePercent )
 	metricBatteryRemainingTimeMinutes.Set( status.UPS.Battery.RemainingRuntimeMinutes )
+	metricBatteryLowThreshold.Set( status.UPS.Battery.LowBatterySignalThreshold )
+	metricBatteryCount.Set( status.UPS.Battery.ExternalCount )
 	fmt.Println( "  Updated the battery metrics." )
-	
+
 	// Update daemon metrics
 	metricDaemonRemainingChargePercent.Set( status.Daemon.Configuration.MinimumBatteryChargePercent )
 	metricDaemonRemainingTimeMinutes.Set( status.Daemon.Configuration.MinimumBatteryRemainingRuntimeMinutes )

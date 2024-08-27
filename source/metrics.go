@@ -20,6 +20,13 @@ var (
 		Help: "The current status.",
 	} )
 
+	// Current internal temperature (as celsius) - ITEMP - SmartUPS X 3000
+	metricTemperature = promauto.NewGauge( prometheus.GaugeOpts {
+		Namespace: "ups",
+		Name: "temperature_celsius",
+		Help: "The current internal temperature of the UPS.",
+	} )
+
 	/*************************************/
 
 	// Expected power input (as voltage) - NOMPOWER
@@ -44,6 +51,38 @@ var (
 		Subsystem: "power",
 		Name: "line_voltage",
 		Help: "The current line voltage as returned by the UPS.",
+	} )
+
+	// Maximum line voltage (as voltage) - MAXLINEV - SmartUPS X 3000
+	metricPowerMaximumLineVoltage = promauto.NewGauge( prometheus.GaugeOpts {
+		Namespace: "ups",
+		Subsystem: "power",
+		Name: "line_maximum_voltage",
+		Help: "The maximum line voltage as returned by the UPS.",
+	} )
+
+	// Minimum line voltage (as voltage) - MINLINEV - SmartUPS X 3000
+	metricPowerMinimumLineVoltage = promauto.NewGauge( prometheus.GaugeOpts {
+		Namespace: "ups",
+		Subsystem: "power",
+		Name: "line_minimum_voltage",
+		Help: "The minimum line voltage as returned by the UPS.",
+	} )
+
+	// Current line frequency (as hertz) - LINEFREQ - SmartUPS X 3000
+	metricPowerLineFrequency = promauto.NewGauge( prometheus.GaugeOpts {
+		Namespace: "ups",
+		Subsystem: "power",
+		Name: "line_frequency_hertz",
+		Help: "The current line frequency as returned by the UPS.",
+	} )
+
+	// Current output voltage (as voltage) - OUTPUTV - SmartUPS X 3000
+	metricPowerOutputVoltage = promauto.NewGauge( prometheus.GaugeOpts {
+		Namespace: "ups",
+		Subsystem: "power",
+		Name: "output_voltage",
+		Help: "The current output voltage as returned by the UPS.",
 	} )
 
 	// Current load capacity (as percentage) - LOADPCT
@@ -104,6 +143,22 @@ var (
 		Help: "The remaining runtime left on the battery as estimated by the UPS, in minutes.",
 	} )
 
+	// Low battery threshold (in minutes) - DLOWBATT - SmartUPS X 3000
+	metricBatteryLowThreshold = promauto.NewGauge( prometheus.GaugeOpts {
+		Namespace: "ups",
+		Subsystem: "battery",
+		Name: "low_threshold_minutes",
+		Help: "The low battery threshold, in minutes.",
+	} )
+
+	// Number of external batteries - EXTBATTS - SmartUPS X 3000
+	metricBatteryCount = promauto.NewGauge( prometheus.GaugeOpts {
+		Namespace: "ups",
+		Subsystem: "battery",
+		Name: "count",
+		Help: "The number of external batteries in the UPS.",
+	} )
+
 	/*************************************/
 
 	// Configured minimum battery charge (as percentage) - MBATTCHG
@@ -153,11 +208,16 @@ func ResetMetrics() {
 
 	// Status
 	metricStatus.Set( 0 )
+	metricTemperature.Set( 0 )
 
 	// Power
 	metricPowerInputExpectVoltage.Set( 0 )
 	metricPowerOutputWattage.Set( 0 )
 	metricPowerLineVoltage.Set( 0 )
+	metricPowerMaximumLineVoltage.Set( 0 )
+	metricPowerMinimumLineVoltage.Set( 0 )
+	metricPowerLineFrequency.Set( 0 )
+	metricPowerOutputVoltage.Set( 0 )
 	metricPowerLoadPercent.Set( 0 )
 
 	// Battery
@@ -167,6 +227,8 @@ func ResetMetrics() {
 	metricBatteryTimeSpentTotalSeconds.Set( 0 )
 	metricBatteryRemainingChargePercent.Set( 0 )
 	metricBatteryRemainingTimeMinutes.Set( 0 )
+	metricBatteryLowThreshold.Set( 0 )
+	metricBatteryCount.Set( 0 )
 
 	// Daemon
 	metricDaemonRemainingChargePercent.Set( 0 )
