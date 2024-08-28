@@ -144,6 +144,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 	for _, line := range lines {
 
 		// Skip lines that are empty
+		line = strings.TrimSpace( line )
 		if line == "" { continue }
 
 		// Parse the line into key & value
@@ -202,7 +203,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The current line voltage as returned by the UPS"
 			case "LINEV": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.LineVoltage = parsedFloat
@@ -210,7 +211,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The percentage of load capacity as estimated by the UPS"
 			case "LOADPCT": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.LoadPercent = parsedFloat
@@ -218,7 +219,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The percentage charge on the batteries"
 			case "BCHARGE": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Battery.ChargePercent = parsedFloat
@@ -226,7 +227,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The remaining runtime left on batteries as estimated by the UPS"
 			case "TIMELEFT": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Battery.RemainingRuntimeMinutes = parsedFloat
@@ -234,7 +235,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "If the battery charge percentage (BCHARGE) drops below this value, apcupsd will shutdown your system. Value is set in the configuration file (BATTERYLEVEL)"
 			case "MBATTCHG": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Configuration.MinimumBatteryChargePercent = parsedFloat
@@ -242,7 +243,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "apcupsd will shutdown your system if the remaining runtime equals or is below this point. Value is set in the configuration file (MINUTES)"
 			case "MINTIMEL": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Configuration.MinimumBatteryRemainingRuntimeMinutes = parsedFloat
@@ -250,7 +251,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "apcupsd will shutdown your system if the time on batteries exceeds this value. A value of zero disables the feature. Value is set in the configuration file (TIMEOUT)"
 			case "MAXTIME": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Configuration.MaximumTimeoutMinutes = parsedFloat
@@ -258,7 +259,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "The maximum line voltage since the last STATUS as returned by the UPS."
 			case "MAXLINEV": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.MaximumLineVoltage = parsedFloat
@@ -266,7 +267,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "The minimum line voltage since the last STATUS as returned by the UPS."
 			case "MINLINEV": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.MinimumLineVoltage = parsedFloat
@@ -274,7 +275,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "The voltage the UPS is supplying to your equipment."
 			case "OUTPUTV": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.OutputVoltage = parsedFloat
@@ -285,7 +286,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "The remaining runtime below which the UPS sends the low battery signal. At this point apcupsd will force an immediate emergency shutdown. "
 			case "DLOWBATT": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Battery.LowBatterySignalThreshold = parsedFloat
@@ -293,7 +294,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The line voltage below which the UPS will switch to batteries"
 			case "LOTRANS": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Battery.Transfer.LowLineVoltage = parsedFloat
@@ -301,7 +302,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The line voltage above which the UPS will switch to batteries"
 			case "HITRANS": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Battery.Transfer.HighLineVoltage = parsedFloat
@@ -309,7 +310,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "The internal UPS temperature as supplied by the UPS."
 			case "ITEMP": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Temperature = parsedFloat
@@ -317,19 +318,15 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The delay period for the UPS alarm"
 			case "ALARMDEL": {
-				if ( value == "No alarm" ) {
-					status.UPS.AlarmIntervalSeconds = -1
-				} else {
-					parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
-					if floatParseError != nil { return Status{}, floatParseError }
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
+				if floatParseError != nil { return Status{}, floatParseError }
 
-					status.UPS.AlarmIntervalSeconds = parsedFloat
-				}
+				status.UPS.AlarmIntervalSeconds = parsedFloat
 			}
 
 			// "Battery voltage as supplied by the UPS"
 			case "BATTV": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Battery.OutputVoltage = parsedFloat
@@ -337,7 +334,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "The line frequency in Hertz as given by the UPS."
 			case "LINEFREQ": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.LineFrequency = parsedFloat
@@ -348,7 +345,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The number of transfers to batteries since apcupsd startup"
 			case "NUMXFERS": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Battery.Transfer.Total = parsedFloat
@@ -356,7 +353,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "Time in seconds currently on batteries, or 0"
 			case "TONBATT": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Battery.TimeSpent.Current = parsedFloat
@@ -364,7 +361,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "Total (cumulative) time on batteries in seconds since apcupsd startup"
 			case "CUMONBATT": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.Daemon.Battery.TimeSpent.Total = parsedFloat
@@ -372,7 +369,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "Time and date of last transfer from batteries, or N/A."
 			case "XOFFBATT": {
-				if ( value == "N/A" ) {
+				if (value == "N/A") {
 					status.Daemon.Battery.Transfer.LastAt = time.Unix(0, 0)
 				} else {
 					parsedDate, dateParseError := time.Parse( "2006-01-02 15:04:05 -0700", value )
@@ -387,11 +384,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "The interval in hours between automatic self tests."
 			case "STESTI": {
-				if (value == "OFF") {
-					status.UPS.SelfTestInterval = -1
-				}
-
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.SelfTestInterval = parsedFloat
@@ -432,7 +425,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The input voltage that the UPS is configured to expect"
 			case "NOMINV": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Expect.MainsInputVoltage = parsedFloat
@@ -440,7 +433,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The nominal battery voltage"
 			case "NOMBATTV": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Expect.BatteryOutputVoltage = parsedFloat
@@ -448,7 +441,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// SmartUPS X 3000 - "The number of external batteries as defined by the user. A correct number here helps the UPS compute the remaining runtime more accurately.""
 			case "EXTBATTS": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Battery.ExternalCount = parsedFloat
@@ -456,7 +449,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 
 			// "The maximum power in Watts that the UPS is designed to supply"
 			case "NOMPOWER": {
-				parsedFloat, floatParseError := strconv.ParseFloat( value, 64 )
+				parsedFloat, floatParseError := parseAsFloat( value, -1 )
 				if floatParseError != nil { return Status{}, floatParseError }
 
 				status.UPS.Expect.PowerOutputWattage = parsedFloat

@@ -11,7 +11,7 @@ import (
 // Metadata
 const (
 	PROJECT_NAME = "APC UPS Exporter"
-	PROJECT_VERSION = "1.2.0"
+	PROJECT_VERSION = "1.2.1"
 
 	AUTHOR_NAME = "viral32111"
 	AUTHOR_WEBSITE = "https://viral32111.com"
