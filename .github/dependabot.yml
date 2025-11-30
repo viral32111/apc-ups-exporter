@@ -1,14 +1,27 @@
 version: 2
 updates:
-
-  # Workflows
+  # .github/workflows/*.yml
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: saturday
+      time: "09:00"
+      timezone: Europe/London
+    groups:
+      default:
+        patterns:
+          - "*"
 
-  # Project
+  # go.mod
   - package-ecosystem: gomod
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: saturday
+      time: "09:00"
+      timezone: Europe/London
+    groups:
+      default:
+        patterns:
+          - "*"
