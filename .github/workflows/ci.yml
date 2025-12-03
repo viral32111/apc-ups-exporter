@@ -39,10 +39,10 @@ jobs:
       contents: read
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.22'
 
@@ -57,7 +57,7 @@ jobs:
           OPERATING_SYSTEM: ${{ matrix.operatingSystem }}
           ARCHITECTURE: ${{ matrix.architecture }}
           LIBRARY: ${{ matrix.library }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { PROJECT_NAME, OPERATING_SYSTEM, ARCHITECTURE, LIBRARY } = process.env;
@@ -79,7 +79,7 @@ jobs:
         run: go build -v -ldflags='-s -w' -o ${{ steps.names.outputs.executable }} ./source/
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ steps.names.outputs.artifact }}
           path: ${{ steps.names.outputs.executable }}
@@ -104,7 +104,7 @@ jobs:
       packages: write
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
@@ -123,7 +123,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download build artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ env.PROJECT_NAME }}-linux-${{ matrix.architecture }}-${{ matrix.library }}
           path: artifact
@@ -172,7 +172,7 @@ jobs:
       packages: write
     steps:
       - name: Clone repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Docker
         uses: docker/setup-buildx-action@v3
@@ -279,7 +279,7 @@ jobs:
       contents: write
     steps:
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           path: artifacts
 
