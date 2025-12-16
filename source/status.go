@@ -404,7 +404,7 @@ func ParseStatusText( text string ) ( status Status, err error ) {
 				if dateParseError != nil {
 					parsedDate, dateParseError = time.Parse( "01/02/2006", value ) // SmartUPS X 3000 reports date in MM/DD/YYYY format - https://github.com/viral32111/apc-ups-exporter/issues/30
           if dateParseError != nil {
-					  parsedDate, dateParseError = time.Parse( "01/02/06", value ) //SmartUPS 3000 reports date in MM/DD/YY format (see above link)
+            parsedDate, dateParseError = time.Parse( "01/02/06", value ) //SmartUPS 3000 reports date in MM/DD/YY format (see above link)
             if dateParseError != nil { return Status{}, dateParseError }
           }
 				}
